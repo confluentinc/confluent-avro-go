@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hamba/avro/v2"
-	"github.com/hamba/avro/v2/gen"
-	"github.com/hamba/avro/v2/registry"
+	"github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2/gen"
+	"github.com/confluentinc/confluent-avro-go/v2/registry"
 	"golang.org/x/tools/imports"
 )
 

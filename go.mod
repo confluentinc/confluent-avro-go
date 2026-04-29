@@ -1,4 +1,4 @@
-module github.com/hamba/avro/v2
+module github.com/confluentinc/confluent-avro-go/v2
 
 go 1.25.0
 

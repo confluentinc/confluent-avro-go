@@ -1,6 +1,6 @@
 package avro_test
 
-import "github.com/hamba/avro/v2"
+import "github.com/confluentinc/confluent-avro-go/v2"
 
 func ConfigTeardown() {
 	// Reset the caches

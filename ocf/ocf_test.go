@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hamba/avro/v2"
-	"github.com/hamba/avro/v2/ocf"
+	"github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2/ocf"
 	"github.com/klauspost/compress/zstd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

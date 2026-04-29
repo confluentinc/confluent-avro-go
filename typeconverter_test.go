@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hamba/avro/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 var (
