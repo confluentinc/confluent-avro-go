@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/hamba/avro/v2"
-	"github.com/hamba/avro/v2/soe"
-	"github.com/hamba/avro/v2/soe/resolvers"
-	"github.com/hamba/avro/v2/soe/internal/testdata"
+	"github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2/soe"
+	"github.com/confluentinc/confluent-avro-go/v2/soe/resolvers"
+	"github.com/confluentinc/confluent-avro-go/v2/soe/internal/testdata"
 	"github.com/stretchr/testify/require"
 )
 

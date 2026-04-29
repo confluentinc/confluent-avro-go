@@ -1,38 +1,31 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="http://svg.wiersma.co.za/hamba/project?title=avro&tag=A%20fast%20Go%20avro%20codec&mode=dark">
-  <source media="(prefers-color-scheme: light)" srcset="http://svg.wiersma.co.za/hamba/project?title=avro&tag=A%20fast%20Go%20avro%20codec">
-  <img alt="Logo" src="http://svg.wiersma.co.za/hamba/project?title=avro&tag=A%20fast%20Go%20avro%20codec">
-</picture>
-
-[![Go Report Card](https://goreportcard.com/badge/github.com/hamba/avro/v2)](https://goreportcard.com/report/github.com/hamba/avro/v2)
-[![Build Status](https://github.com/hamba/avro/actions/workflows/test.yml/badge.svg)](https://github.com/hamba/avro/actions)
-[![Coverage Status](https://coveralls.io/repos/github/hamba/avro/badge.svg?branch=main)](https://coveralls.io/github/hamba/avro?branch=main)
-[![Go Reference](https://pkg.go.dev/badge/github.com/hamba/avro/v2.svg)](https://pkg.go.dev/github.com/hamba/avro/v2)
-[![GitHub release](https://img.shields.io/github/release/hamba/avro.svg)](https://github.com/hamba/avro/releases)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/hamba/avro/master/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/confluentinc/confluent-avro-go/v2)](https://goreportcard.com/report/github.com/confluentinc/confluent-avro-go/v2)
+[![Build Status](https://github.com/confluentinc/confluent-avro-go/actions/workflows/test.yml/badge.svg)](https://github.com/confluentinc/confluent-avro-go/actions)
+[![Coverage Status](https://coveralls.io/repos/github/confluentinc/confluent-avro-go/badge.svg?branch=master)](https://coveralls.io/github/confluentinc/confluent-avro-go?branch=master)
+[![Go Reference](https://pkg.go.dev/badge/github.com/confluentinc/confluent-avro-go/v2.svg)](https://pkg.go.dev/github.com/confluentinc/confluent-avro-go/v2)
+[![GitHub release](https://img.shields.io/github/release/confluentinc/confluent-avro-go.svg)](https://github.com/confluentinc/confluent-avro-go/releases)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/confluentinc/confluent-avro-go/master/LICENCE)
 
 A fast Go avro codec
 
-> [!WARNING]
-> This project is no longer maintained.
+> [!NOTE]
+> **This is a Confluent-maintained fork of [`github.com/hamba/avro`](https://github.com/hamba/avro), which is no longer maintained upstream.**
 >
-> If you wish to update or extend `avro`, please do so in a fork.
+> This fork is consumed by [`github.com/confluentinc/confluent-kafka-go`](https://github.com/confluentinc/confluent-kafka-go) for its Schema Registry Avro serde, and is published as `github.com/confluentinc/confluent-avro-go`.
+>
+> Please file issues and pull requests against [`confluentinc/confluent-avro-go`](https://github.com/confluentinc/confluent-avro-go).
 
-I am grateful for the contributions and support from the community over the years.
+## Acknowledgments
 
-This project was born out of necessity for a fast and reliable Avro codec for Go.
-It has been a labor of love, and I hope has served you well in your projects, but
-I no longer have the time to maintain it.
+Thanks to the [hamba](https://github.com/hamba/avro) team for the original library. Confluent
+maintains this fork for use in [`confluent-kafka-go`](https://github.com/confluentinc/confluent-kafka-go).
 
 ## Overview
 
 Install with:
 
 ```shell
-go get github.com/hamba/avro/v2
+go get github.com/confluentinc/confluent-avro-go/v2
 ```
-
-**Note:** This project has renamed the default branch from `master` to `main`. You will need to update your local environment.
 
 ## Usage
 
@@ -45,7 +38,7 @@ type SimpleRecord struct {
 schema, err := avro.Parse(`{
     "type": "record",
     "name": "simple",
-    "namespace": "org.hamba.avro",
+    "namespace": "org.confluent.avro",
     "fields" : [
         {"name": "a", "type": "long"},
         {"name": "b", "type": "string"}
@@ -75,7 +68,7 @@ fmt.Println(out)
 // Outputs: {27 foo}
 ```
 
-More examples in the [godoc](https://pkg.go.dev/github.com/hamba/avro/v2).
+More examples in the [godoc](https://pkg.go.dev/github.com/confluentinc/confluent-avro-go/v2).
 
 #### Types Conversions
 
@@ -184,7 +177,7 @@ be implemented with pointer receivers.
 * **any:** An `interface` can be provided and the type or name resolved. Primitive types
 are pre-registered, but named types, maps and slices will need to be registered with the `Register` function.
 In the case of arrays and maps the enclosed schema type or name is postfix to the type with a `:` separator,
-e.g `"map:string"`. Behavior when a type cannot be resolved will depend on your chosen configuation options:
+e.g `"map:string"`. Behavior when a type cannot be resolved will depend on your chosen configuration options:
 	* !Config.UnionResolutionError && !Config.PartialUnionTypeResolution: the map type above is used
 	* Config.UnionResolutionError && !Config.PartialUnionTypeResolution: an error is returned
 	* !Config.UnionResolutionError && Config.PartialUnionTypeResolution: any registered type will get resolved while any unregistered type will fallback to the map type above.
@@ -243,7 +236,7 @@ You can use the avrogen command line tool to generate the structs, or use it as 
 Install the struct generator with:
 
 ```shell
-go install github.com/hamba/avro/v2/cmd/avrogen@<version>
+go install github.com/confluentinc/confluent-avro-go/v2/cmd/avrogen@<version>
 ```
 
 Example usage assuming there's a valid schema in `in.avsc`:
@@ -290,7 +283,7 @@ schemas to the console. It can be used in CI/CD pipelines to validate schema cha
 Install the Avro schema validator with:
 
 ```shell
-go install github.com/hamba/avro/v2/cmd/avrosv@<version>
+go install github.com/confluentinc/confluent-avro-go/v2/cmd/avrosv@<version>
 ```
 
 Example usage assuming there's a valid schema in `in.avsc` (exit status code is `0`):
@@ -339,8 +332,7 @@ This library supports the last two versions of Go. While the minimum Go version 
 not guaranteed to increase along side Go, it may jump from time to time to support
 additional features. This will be not be considered a breaking change.
 
-## Who uses hamba/avro?
+## Contributing
 
-- [Apache Arrow for Go](https://github.com/apache/arrow-go)
-- [confluent-kafka-go](https://github.com/confluentinc/confluent-kafka-go)
-- [pulsar-client-go](https://github.com/apache/pulsar-client-go)
+Issues and pull requests are welcome on the [confluentinc/confluent-avro-go](https://github.com/confluentinc/confluent-avro-go)
+repository. Please open issues and PRs there rather than against the upstream `hamba/avro` repo.

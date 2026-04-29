@@ -2,7 +2,7 @@
 package testpkg
 
 import (
-	"github.com/hamba/avro/v2"
+	avro "github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // Test is a test struct.

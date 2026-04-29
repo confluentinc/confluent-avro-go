@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/hamba/avro/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/stretchr/testify/assert"
 )
 

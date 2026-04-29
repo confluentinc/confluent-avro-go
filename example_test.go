@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/hamba/avro/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +17,7 @@ func ExampleParse() {
 	schema, err := avro.Parse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -35,7 +35,7 @@ func ExampleNewDecoder() {
 	schema := `{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -65,7 +65,7 @@ func ExampleNewDecoderForSchema() {
 	schema := avro.MustParse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -94,7 +94,7 @@ func ExampleUnmarshal() {
 	schema := avro.MustParse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -121,7 +121,7 @@ func ExampleNewEncoder() {
 	schema := `{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -153,7 +153,7 @@ func ExampleNewEncoderForSchema() {
 	schema := avro.MustParse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -182,7 +182,7 @@ func ExampleMarshal() {
 	schema := avro.MustParse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}
@@ -209,7 +209,7 @@ func TestEncoderDecoder_Concurrency(t *testing.T) {
 	schema := avro.MustParse(`{
 	    "type": "record",
 	    "name": "simple",
-	    "namespace": "org.hamba.avro",
+	    "namespace": "org.confluent.avro",
 	    "fields" : [
 	        {"name": "a", "type": "long"},
 	        {"name": "b", "type": "string"}

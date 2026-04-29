@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hamba/avro/v2"
-	"github.com/hamba/avro/v2/soe"
+	"github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2/soe"
 )
 
 // MemorySchemaStore is a basic in-memory schema store and resolver

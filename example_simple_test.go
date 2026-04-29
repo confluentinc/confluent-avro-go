@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/hamba/avro/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 var Schema = `{
 		"type": "record",
 		"name": "simple",
-		"namespace": "org.hamba.avro",
+		"namespace": "org.confluent.avro",
 		"fields" : [
 			{"name": "a", "type": "long"},
 			{"name": "b", "type": "string"}

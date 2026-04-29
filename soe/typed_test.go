@@ -3,8 +3,8 @@ package soe_test
 import (
 	"testing"
 
-	"github.com/hamba/avro/v2/soe"
-	"github.com/hamba/avro/v2/soe/internal/testdata"
+	"github.com/confluentinc/confluent-avro-go/v2/soe"
+	"github.com/confluentinc/confluent-avro-go/v2/soe/internal/testdata"
 	"github.com/stretchr/testify/require"
 )
 

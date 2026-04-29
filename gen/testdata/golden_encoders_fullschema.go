@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/hamba/avro/v2"
+	avro "github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // InnerRecord is a generated struct.
