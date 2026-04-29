@@ -1,9 +1,11 @@
 package avro
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"unsafe"
 )
@@ -248,18 +250,14 @@ func (r *Reader) ReadLong() int64 {
 func (r *Reader) ReadFloat() float32 {
 	var buf [4]byte
 	r.Read(buf[:])
-
-	float := *(*float32)(unsafe.Pointer(&buf[0]))
-	return float
+	return math.Float32frombits(binary.LittleEndian.Uint32(buf[:]))
 }
 
 // ReadDouble reads a Double from the Reader.
 func (r *Reader) ReadDouble() float64 {
 	var buf [8]byte
 	r.Read(buf[:])
-
-	float := *(*float64)(unsafe.Pointer(&buf[0]))
-	return float
+	return math.Float64frombits(binary.LittleEndian.Uint64(buf[:]))
 }
 
 // ReadBytes reads Bytes from the Reader.

@@ -56,6 +56,37 @@ jobs:
           parallel: true
           flag-name: go-${{ matrix.go-version }}
 
+  # Cross-execute the test suite on s390x (big-endian) via qemu-user emulation.
+  # Catches endianness bugs (e.g. raw byte reinterpretation that depends on the
+  # host CPU) that would otherwise slip past the amd64 test job.
+  # Intentionally runs without -race (unsupported under qemu) and on a single Go
+  # version; race conditions are arch-independent and already covered above.
+  test-bigendian:
+    runs-on: ubuntu-latest
+    env:
+      GOARCH: s390x
+      GO_VERSION: "1.25"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Go
+        id: install-go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download dependencies
+        run: go mod download
+        if: steps.install-go.outputs.cache-hit != 'true'
+
+      - name: Install qemu-user-static
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+
+      - name: Run tests under qemu-s390x
+        run: go test -exec qemu-s390x ./...
+
   finish:
     needs: test
     if: ${{ always() }}
