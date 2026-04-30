@@ -10,4 +10,4 @@ renovatebot:
   automerge:
     enable: true
 semaphore:
-  enable: false
+  enable: true
