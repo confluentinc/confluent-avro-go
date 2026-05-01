@@ -11,3 +11,18 @@ renovatebot:
     enable: true
 semaphore:
   enable: true
+  pipeline_enable: false
+  tasks:
+    - name: create-git-tag
+      branch: master
+      pipeline_file: .semaphore/create-git-tag.yml
+      parameters:
+        - name: TAG_NAME
+          required: true
+          description: The name of the tag to be created.
+          default_value: "vX.Y.Z"
+  managed_sections:
+    - version
+    - name
+    - agent
+    - global_job_config
