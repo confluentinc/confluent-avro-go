@@ -1,0 +1,94 @@
+# This file is managed by ServiceBot plugin - Semaphore. The content in this file is created using a common
+# template and configurations in service.yml.
+# Any modifications made to version, name, agent, and global_job_config will be overwritten by the generated
+# content in nightly runs. Code changes made to the remaining sections will not be affected.
+# For more information, please refer to the page:
+# https://confluentinc.atlassian.net/wiki/spaces/Foundations/pages/2871296194/Add+SemaphoreCI
+version: v1.0
+name: build-test-release
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+
+auto_cancel:
+  running:
+    when: "branch != 'master'"
+
+execution_time_limit:
+  hours: 1
+
+queue:
+  - when: "branch != 'master'"
+    processing: parallel
+
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+
+blocks:
+  - name: "Linux amd64: Lint + Test (Go 1.24)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      env_vars:
+        - name: GOLANGCI_LINT_VERSION
+          value: v2.6.2
+        - name: GO_VERSION
+          value: "1.24"
+      prologue:
+        commands:
+          - sem-version go $GO_VERSION
+          - export GOPATH=$(go env GOPATH)
+          - export PATH="$PATH:$GOPATH/bin"
+          - go mod download
+      jobs:
+        - name: "Lint"
+          commands:
+            - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+            - golangci-lint run ./...
+        - name: "Test"
+          commands:
+            - go test -cover -race ./...
+
+  - name: "Linux amd64: Test (Go 1.25)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      env_vars:
+        - name: GO_VERSION
+          value: "1.25"
+      prologue:
+        commands:
+          - sem-version go $GO_VERSION
+          - export GOPATH=$(go env GOPATH)
+          - export PATH="$PATH:$GOPATH/bin"
+          - go mod download
+      jobs:
+        - name: "Test"
+          commands:
+            - go test -cover -race ./...
+
+  - name: "Linux arm64: Test (Go 1.25)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-arm64-1
+      env_vars:
+        - name: GO_VERSION
+          value: "1.25"
+      prologue:
+        commands:
+          - sem-version go $GO_VERSION
+          - export GOPATH=$(go env GOPATH)
+          - export PATH="$PATH:$GOPATH/bin"
+          - go mod download
+      jobs:
+        - name: "Test"
+          commands:
+            - go test -cover -race ./...
