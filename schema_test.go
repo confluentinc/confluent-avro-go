@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

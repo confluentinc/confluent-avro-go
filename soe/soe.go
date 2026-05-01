@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // Magic is the two-byte magic marker described in:

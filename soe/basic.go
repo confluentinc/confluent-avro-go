@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // Codec marshals values to/from bytes, with the Avro binary payload wrapped in

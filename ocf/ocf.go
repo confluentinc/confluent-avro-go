@@ -13,7 +13,7 @@ import (
 	"io"
 	"os"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/confluentinc/confluent-avro-go/v2/internal/bytesx"
 	"github.com/klauspost/compress/zstd"
 )

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // DecoderFunc is a function used to customize the Decoder.

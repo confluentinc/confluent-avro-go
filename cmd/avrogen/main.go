@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/confluentinc/confluent-avro-go/v2/gen"
 	"github.com/confluentinc/confluent-avro-go/v2/registry"
 	"golang.org/x/tools/imports"

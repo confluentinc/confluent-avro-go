@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 )
 
 type Superhero struct {

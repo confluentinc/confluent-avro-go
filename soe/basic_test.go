@@ -19,8 +19,8 @@ func newCodec(t *testing.T) *soe.Codec {
 
 // Used to test over all decoder functions.
 func decoderFuncs(codec *soe.Codec) map[string]func([]byte, any) error {
-	return map[string]func([]byte, any) error{
-		"Decode":           codec.Decode,
+	return map[string]func([]byte, any) error {
+		"Decode": codec.Decode,
 		"DecodeUnverified": codec.DecodeUnverified,
 	}
 }
@@ -89,6 +89,7 @@ func TestCodec_DecodeBadMagic(t *testing.T) {
 
 			// All decoders should validate the magic
 			require.ErrorContains(t, err, "invalid magic")
+
 		})
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	avro "github.com/confluentinc/confluent-avro-go/v2"
+	"github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/confluentinc/confluent-avro-go/v2/ocf"
 	"github.com/klauspost/compress/zstd"
 	"github.com/stretchr/testify/assert"
