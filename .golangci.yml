@@ -7,7 +7,14 @@ formatters:
     - gci
     - gofmt
     - gofumpt
-    - goimports
+    # goimports is intentionally NOT enabled. It enforces an explicit `avro`
+    # alias on every `github.com/confluentinc/confluent-avro-go/v2` import
+    # because the path's last segment ("v2") differs from the package name.
+    # This is a goimports/gci stylistic preference, not a Go-language rule —
+    # `import "..../v2"` works fine without an alias since the compiler uses
+    # the actual `package avro` declaration. Adopting the alias would touch
+    # ~55 files and the convention is not standard across Go. gci handles
+    # import grouping/sorting on its own.
   settings:
     gofumpt:
       extra-rules: true

@@ -11,7 +11,7 @@ renovatebot:
     enable: true
 semaphore:
   enable: true
-  pipeline_enable: false
+  pipeline_enable: true
   tasks:
     - name: create-git-tag
       branch: master
