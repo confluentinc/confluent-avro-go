@@ -27,33 +27,7 @@ global_job_config:
       - checkout
 
 blocks:
-  - name: "Linux amd64: Lint + Test (Go 1.24)"
-    dependencies: []
-    task:
-      agent:
-        machine:
-          type: s1-prod-ubuntu24-04-amd64-1
-      env_vars:
-        - name: GOLANGCI_LINT_VERSION
-          value: v2.6.2
-        - name: GO_VERSION
-          value: "1.24"
-      prologue:
-        commands:
-          - sem-version go $GO_VERSION
-          - export GOPATH=$(go env GOPATH)
-          - export PATH="$PATH:$GOPATH/bin"
-          - go mod download
-      jobs:
-        - name: "Lint"
-          commands:
-            - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
-            - golangci-lint run ./...
-        - name: "Test"
-          commands:
-            - go test -cover -race ./...
-
-  - name: "Linux amd64: Test (Go 1.25)"
+  - name: "Lint"
     dependencies: []
     task:
       agent:
@@ -62,6 +36,8 @@ blocks:
       env_vars:
         - name: GO_VERSION
           value: "1.25"
+        - name: GOLANGCI_LINT_VERSION
+          value: v2.6.2
       prologue:
         commands:
           - sem-version go $GO_VERSION
@@ -69,9 +45,33 @@ blocks:
           - export PATH="$PATH:$GOPATH/bin"
           - go mod download
       jobs:
-        - name: "Test"
+        - name: "golangci-lint"
           commands:
-            - go test -cover -race ./...
+            - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCI_LINT_VERSION
+            - golangci-lint run ./...
+
+  - name: "Linux amd64: Test"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      jobs:
+        - name: "Test"
+          matrix:
+            - env_var: GO_VERSION
+              values:
+                - "1.24"
+                - "1.25"
+          commands:
+            - sem-version go $GO_VERSION
+            - export GOPATH=$(go env GOPATH)
+            - export PATH="$PATH:$GOPATH/bin"
+            - go install gotest.tools/gotestsum@v1.13.0
+            - go mod download
+            - gotestsum --junitfile tests.xml --format pkgname -- -covermode=atomic -coverprofile=coverage-amd64-${GO_VERSION}.txt -race ./...
+            - test-results publish tests.xml
+            - artifact push workflow coverage-amd64-${GO_VERSION}.txt || true
 
   - name: "Linux arm64: Test (Go 1.25)"
     dependencies: []
@@ -87,8 +87,89 @@ blocks:
           - sem-version go $GO_VERSION
           - export GOPATH=$(go env GOPATH)
           - export PATH="$PATH:$GOPATH/bin"
+          - go install gotest.tools/gotestsum@v1.13.0
           - go mod download
       jobs:
         - name: "Test"
           commands:
-            - go test -cover -race ./...
+            - gotestsum --junitfile tests.xml --format pkgname -- -covermode=atomic -coverprofile=coverage-arm64-${GO_VERSION}.txt -race ./...
+            - test-results publish tests.xml
+            - artifact push workflow coverage-arm64-${GO_VERSION}.txt || true
+
+  - name: "Linux s390x: Test bigendian (Go 1.25)"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      env_vars:
+        - name: GO_VERSION
+          value: "1.25"
+        - name: GOARCH
+          value: s390x
+      prologue:
+        commands:
+          - sem-version go $GO_VERSION
+          - export GOPATH=$(go env GOPATH)
+          - export PATH="$PATH:$GOPATH/bin"
+          - sudo apt-get update -q
+          - sudo apt-get install -y qemu-user-static
+          - go mod download
+      jobs:
+        - name: "Test"
+          # No -race: qemu does not support the race detector. Coverage still collected.
+          commands:
+            - go test -exec qemu-s390x -coverprofile=coverage-s390x-${GO_VERSION}.txt ./...
+            - artifact push workflow coverage-s390x-${GO_VERSION}.txt || true
+
+  - name: "Cross-build CLIs"
+    dependencies: []
+    task:
+      agent:
+        machine:
+          type: s1-prod-ubuntu24-04-amd64-1
+      env_vars:
+        - name: GO_VERSION
+          value: "1.25"
+      prologue:
+        commands:
+          - sem-version go $GO_VERSION
+          - export GOPATH=$(go env GOPATH)
+          - export PATH="$PATH:$GOPATH/bin"
+          - go mod download
+      jobs:
+        - name: "Build"
+          matrix:
+            - env_var: GOOS_GOARCH_GOARM
+              values:
+                - "linux,386,"
+                - "linux,amd64,"
+                - "linux,arm,7"
+                - "linux,arm64,"
+                - "linux,ppc64le,"
+                - "linux,s390x,"
+                - "darwin,amd64,"
+                - "darwin,arm64,"
+                - "windows,386,"
+                - "windows,amd64,"
+          commands:
+            - export GOOS=$(echo $GOOS_GOARCH_GOARM | cut -d, -f1)
+            - export GOARCH=$(echo $GOOS_GOARCH_GOARM | cut -d, -f2)
+            - export GOARM=$(echo $GOOS_GOARCH_GOARM | cut -d, -f3)
+            - go build ./cmd/avrogen
+            - go build ./cmd/avrosv
+
+after_pipeline:
+  task:
+    agent:
+      machine:
+        type: s1-prod-ubuntu24-04-amd64-1
+    jobs:
+      - name: SonarQube
+        commands:
+          - checkout
+          - artifact pull workflow coverage-amd64-1.24.txt || true
+          - artifact pull workflow coverage-amd64-1.25.txt || true
+          - artifact pull workflow coverage-arm64-1.25.txt || true
+          - artifact pull workflow coverage-s390x-1.25.txt || true
+          - emit-sonarqube-data --run_only_sonar_scan
