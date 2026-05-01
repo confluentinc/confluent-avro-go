@@ -118,8 +118,11 @@ blocks:
       jobs:
         - name: "Test"
           # No -race: qemu does not support the race detector. Coverage still collected.
+          # qemu-s390x-static (with -static suffix) is the binary provided by the
+          # qemu-user-static package on Ubuntu 24.04. The unsuffixed qemu-s390x
+          # would require the separate qemu-user package.
           commands:
-            - go test -exec qemu-s390x -coverprofile=coverage-s390x-${GO_VERSION}.txt ./...
+            - go test -exec qemu-s390x-static -coverprofile=coverage-s390x-${GO_VERSION}.txt ./...
             - artifact push workflow coverage-s390x-${GO_VERSION}.txt || true
 
   - name: "Cross-build CLIs"
