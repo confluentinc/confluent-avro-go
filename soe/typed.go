@@ -1,8 +1,6 @@
 package soe
 
-import (
-	"github.com/confluentinc/confluent-avro-go/v2"
-)
+import avro "github.com/confluentinc/confluent-avro-go/v2"
 
 // AvroGenerated is implemented by all avrogen-generated Avro types.
 type AvroGenerated interface {

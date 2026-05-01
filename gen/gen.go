@@ -13,8 +13,8 @@ import (
 	"text/template"
 	"unicode/utf8"
 
+	avro "github.com/confluentinc/confluent-avro-go/v2"
 	"github.com/ettle/strcase"
-	"github.com/confluentinc/confluent-avro-go/v2"
 	"golang.org/x/tools/imports"
 )
 
