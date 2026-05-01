@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/confluentinc/confluent-avro-go/v2"
+	avro "github.com/confluentinc/confluent-avro-go/v2"
 	jsoniter "github.com/json-iterator/go"
 )
 

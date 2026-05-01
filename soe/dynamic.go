@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/confluentinc/confluent-avro-go/v2"
+	avro "github.com/confluentinc/confluent-avro-go/v2"
 )
 
 // ErrUnknownSchema is an API error that must be returned if the requested
