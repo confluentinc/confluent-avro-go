@@ -27,8 +27,9 @@ type Config struct {
 	FullSchema   bool
 	StrictTypes  bool
 	Initialisms  []string
-	LogicalTypes []LogicalType
-	Metadata     any
+	LogicalTypes  []LogicalType
+	Metadata      any
+	UnionWrappers bool
 }
 
 // TagStyle defines the styling for a tag.
@@ -65,6 +66,47 @@ var (
 	}
 )
 
+// TypeToFieldName converts a Go type string to a PascalCase identifier suitable
+// for use as a struct field name in a union wrapper. The input must be a type
+// string produced by the generator; other inputs may yield invalid identifiers.
+func TypeToFieldName(typ string) string {
+	if typ == "[]byte" {
+		return "Bytes"
+	}
+	if strings.HasPrefix(typ, "[]") {
+		return TypeToFieldName(typ[2:]) + "Array"
+	}
+	if strings.HasPrefix(typ, "map[string]") {
+		return TypeToFieldName(typ[len("map[string]"):]) + "Map"
+	}
+	// Handle [N]byte fixed types e.g. "[7]byte" → "Fixed7"
+	if strings.HasPrefix(typ, "[") {
+		if end := strings.Index(typ, "]byte"); end > 1 { // end > 1 ensures n has at least one digit character
+			n := typ[1:end]
+			allDigits := len(n) > 0
+			for _, c := range n {
+				if c < '0' || c > '9' {
+					allDigits = false
+					break
+				}
+			}
+			if allDigits {
+				return "Fixed" + n
+			}
+		}
+	}
+	typ = strings.TrimPrefix(typ, "*")
+	// For qualified names like "big.Rat", "time.Time", "avro.LogicalDuration":
+	// take the last dot-separated segment. Special-case big.Rat → BigRat.
+	if typ == "big.Rat" {
+		return "BigRat"
+	}
+	if idx := strings.LastIndex(typ, "."); idx >= 0 {
+		typ = typ[idx+1:]
+	}
+	return strcase.ToPascal(typ)
+}
+
 // Struct generates Go structs based on the schema and writes them to w.
 func Struct(s string, w io.Writer, cfg Config) error {
 	schema, err := avro.Parse(s)
@@ -88,6 +130,7 @@ func StructFromSchema(schema avro.Schema, w io.Writer, cfg Config) error {
 		WithStrictTypes(cfg.StrictTypes),
 		WithFullSchema(cfg.FullSchema),
 		WithMetadata(cfg.Metadata),
+		WithUnionWrappers(cfg.UnionWrappers),
 	}
 	for _, opt := range cfg.LogicalTypes {
 		opts = append(opts, WithLogicalType(opt))
@@ -185,6 +228,14 @@ func WithEnums(b bool) OptsFunc {
 	}
 }
 
+// WithUnionWrappers configures the generator to emit wrapper structs implementing
+// UnionConverter for union types that would otherwise produce `any`.
+func WithUnionWrappers(b bool) OptsFunc {
+	return func(g *Generator) {
+		g.unionWrappers = b
+	}
+}
+
 // LogicalType used when the name of the "LogicalType" field in the Avro schema matches the Name attribute.
 type LogicalType struct {
 	// Name of the LogicalType
@@ -224,12 +275,13 @@ type Generator struct {
 	pkg          string
 	pkgdoc       string
 	tags         map[string]TagStyle
-	fullName     bool
-	encoders     bool
-	fullSchema   bool
-	strictTypes  bool
-	genEnums     bool
-	initialisms  []string
+	fullName      bool
+	encoders      bool
+	fullSchema    bool
+	strictTypes   bool
+	genEnums      bool
+	unionWrappers bool
+	initialisms   []string
 	logicalTypes map[avro.LogicalType]LogicalType
 	metadata     any
 
@@ -237,6 +289,7 @@ type Generator struct {
 	thirdPartyImports []string
 	typedefs          []typedef
 	typeenums         []typeenum
+	unionwrappers     []unionwrapper
 	nameCaser         *strcase.Caser
 }
 
@@ -274,20 +327,21 @@ func (g *Generator) Reset() {
 	g.imports = g.imports[:0]
 	g.thirdPartyImports = g.thirdPartyImports[:0]
 	g.typedefs = g.typedefs[:0]
+	g.unionwrappers = g.unionwrappers[:0]
 }
 
 // Parse parses an avro schema into Go types.
 func (g *Generator) Parse(schema avro.Schema) {
-	_ = g.generate(schema, nil)
+	_ = g.generate(schema, nil, "", "")
 }
 
 // ParseWithMetadata parses an avro schema into Go types with arbitrary metadata attached.
 // The metadata is then passed to the template as `Typedefs[].Metadata`.
 func (g *Generator) ParseWithMetadata(schema avro.Schema, metadata any) {
-	_ = g.generate(schema, metadata)
+	_ = g.generate(schema, metadata, "", "")
 }
 
-func (g *Generator) generate(schema avro.Schema, metadata any) string {
+func (g *Generator) generate(schema avro.Schema, metadata any, structName string, fieldName string) string {
 	switch s := schema.(type) {
 	case *avro.RefSchema:
 		return g.resolveRefSchema(s, metadata)
@@ -305,7 +359,7 @@ func (g *Generator) generate(schema avro.Schema, metadata any) string {
 		}
 		return typ
 	case *avro.ArraySchema:
-		return "[]" + g.generate(s.Items(), metadata)
+		return "[]" + g.generate(s.Items(), metadata, structName, fieldName)
 	case *avro.EnumSchema:
 		if g.genEnums {
 			return g.resolveEnum(s)
@@ -318,9 +372,9 @@ func (g *Generator) generate(schema avro.Schema, metadata any) string {
 		}
 		return typ
 	case *avro.MapSchema:
-		return "map[string]" + g.generate(s.Values(), metadata)
+		return "map[string]" + g.generate(s.Values(), metadata, structName, fieldName)
 	case *avro.UnionSchema:
-		return g.resolveUnionTypes(s, metadata)
+		return g.resolveUnionTypes(s, metadata, structName, fieldName)
 	default:
 		return ""
 	}
@@ -341,7 +395,7 @@ func (g *Generator) resolveTypeName(s avro.NamedSchema) string {
 func (g *Generator) resolveRecordSchema(schema *avro.RecordSchema, metadata any) string {
 	fields := make([]field, len(schema.Fields()))
 	for i, f := range schema.Fields() {
-		typ := g.generate(f.Type(), metadata)
+		typ := g.generate(f.Type(), metadata, g.resolveTypeName(schema), f.Name())
 		fields[i] = g.newField(g.nameCaser.ToPascal(f.Name()), typ, f.Doc(), f.Name(), f.Props())
 	}
 
@@ -376,23 +430,50 @@ func (g *Generator) hasTypeDef(name string) bool {
 	return false
 }
 
+func (g *Generator) hasUnionWrapper(name string) bool {
+	for _, w := range g.unionwrappers {
+		if w.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (g *Generator) resolveWrapperUnion(types []string, structName string, fieldName string) string {
+	name := g.nameCaser.ToPascal(structName) + g.nameCaser.ToPascal(fieldName) + "Union"
+	if !g.hasUnionWrapper(name) {
+		fields := make([]wrapperField, len(types))
+		for i, t := range types {
+			fields[i] = wrapperField{Name: TypeToFieldName(t), Type: t}
+		}
+		g.unionwrappers = append(g.unionwrappers, unionwrapper{Name: name, Fields: fields})
+	}
+	return "*" + name
+}
+
 func (g *Generator) resolveRefSchema(s *avro.RefSchema, metadata any) string {
 	if sx, ok := s.Schema().(*avro.RecordSchema); ok {
 		return g.resolveTypeName(sx)
 	}
-	return g.generate(s.Schema(), metadata)
+	return g.generate(s.Schema(), metadata, "", "")
 }
 
-func (g *Generator) resolveUnionTypes(s *avro.UnionSchema, metadata any) string {
+func (g *Generator) resolveUnionTypes(s *avro.UnionSchema, metadata any, structName string, fieldName string) string {
 	types := make([]string, 0, len(s.Types()))
 	for _, elem := range s.Types() {
 		if _, ok := elem.(*avro.NullSchema); ok {
 			continue
 		}
-		types = append(types, g.generate(elem, metadata))
+		types = append(types, g.generate(elem, metadata, "", ""))
 	}
-	if s.Nullable() {
-		return "*" + types[0]
+	if s.Nullable() && len(types) == 1 {
+		return "*" + g.generate(schemas[0], metadata, structName, fieldName)
+	}
+	if g.unionWrappers && structName != "" && fieldName != "" {
+		if len(types) == 0 {
+			return "any"
+		}
+		return g.resolveWrapperUnion(types, structName, fieldName)
 	}
 	return "any"
 }
@@ -476,6 +557,11 @@ func (g *Generator) Write(w io.Writer) error {
 		return err
 	}
 
+	if len(g.unionwrappers) > 0 {
+		g.addImport("fmt")
+		g.addImport("strings")
+	}
+
 	data := struct {
 		WithEncoders      bool
 		PackageName       string
@@ -485,14 +571,16 @@ func (g *Generator) Write(w io.Writer) error {
 		Typedefs          []typedef
 		Metadata          any
 		Typeenums         []typeenum
+		Unionwrappers     []unionwrapper
 	}{
-		WithEncoders: g.encoders,
-		PackageName:  g.pkg,
-		PackageDoc:   g.pkgdoc,
-		Imports:      append(g.imports, g.thirdPartyImports...),
-		Typedefs:     g.typedefs,
-		Metadata:     g.metadata,
-		Typeenums:    g.typeenums,
+		WithEncoders:  g.encoders,
+		PackageName:   g.pkg,
+		PackageDoc:    g.pkgdoc,
+		Imports:       append(g.imports, g.thirdPartyImports...),
+		Typedefs:      g.typedefs,
+		Metadata:      g.metadata,
+		Typeenums:     g.typeenums,
+		Unionwrappers: g.unionwrappers,
 	}
 	return parsed.Execute(w, data)
 }
@@ -536,4 +624,14 @@ func newTypeEnum(name string, symbols []string) typeenum {
 		Name:    name,
 		Symbols: symbols,
 	}
+}
+
+type unionwrapper struct {
+	Name   string
+	Fields []wrapperField
+}
+
+type wrapperField struct {
+	Name string
+	Type string
 }

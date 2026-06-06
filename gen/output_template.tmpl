@@ -67,3 +67,48 @@ const (
 		}
 	{{- end }}
 {{ end }}
+{{- range .Unionwrappers }}
+// {{ .Name }} is a generated union wrapper.
+type {{ .Name }} struct {
+{{- range .Fields }}
+	{{ .Name }} *{{ .Type }}
+{{- end }}
+}
+
+func (u *{{ .Name }}) validate() error {
+	var set []string
+{{- range .Fields }}
+	if u.{{ .Name }} != nil {
+		set = append(set, "{{ .Name }}")
+	}
+{{- end }}
+	if len(set) > 1 {
+		return fmt.Errorf("{{ .Name }}: multiple fields set: %s", strings.Join(set, ", "))
+	}
+	return nil
+}
+
+func (u *{{ .Name }}) ToAny() (any, error) {
+	if err := u.validate(); err != nil {
+		return nil, err
+	}
+{{- range .Fields }}
+	if u.{{ .Name }} != nil {
+		return u.{{ .Name }}, nil
+	}
+{{- end }}
+	return nil, fmt.Errorf("no value set in {{ .Name }}")
+}
+
+func (u *{{ .Name }}) FromAny(payload any) error {
+	switch t := payload.(type) {
+{{- range .Fields }}
+	case {{ .Type }}:
+		u.{{ .Name }} = &t
+{{- end }}
+	default:
+		return fmt.Errorf("unknown type %T in {{ .Name }}", payload)
+	}
+	return nil
+}
+{{- end }}

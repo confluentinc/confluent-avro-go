@@ -419,6 +419,235 @@ package {{ .PackageName }}
 	assert.Equal(t, string(want), string(formatted))
 }
 
+func TestTypeToFieldName(t *testing.T) {
+	tests := []struct {
+		typ      string
+		expected string
+	}{
+		{"int", "Int"},
+		{"int32", "Int32"},
+		{"int64", "Int64"},
+		{"float32", "Float32"},
+		{"float64", "Float64"},
+		{"bool", "Bool"},
+		{"string", "String"},
+		{"[]byte", "Bytes"},
+		{"[]string", "StringArray"},
+		{"[]int64", "Int64Array"},
+		{"map[string]string", "StringMap"},
+		{"map[string]int64", "Int64Map"},
+		{"[7]byte", "Fixed7"},
+		{"[12]byte", "Fixed12"},
+		{"*big.Rat", "BigRat"},
+		{"time.Time", "Time"},
+		{"time.Duration", "Duration"},
+		{"avro.LogicalDuration", "LogicalDuration"},
+		{"SomeRecord", "SomeRecord"},
+		{"[]SomeRecord", "SomeRecordArray"},
+		{"*SomeRecord", "SomeRecord"},
+		{"*time.Time", "Time"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.typ, func(t *testing.T) {
+			assert.Equal(t, tt.expected, gen.TypeToFieldName(tt.typ))
+		})
+	}
+}
+
+func TestStruct_UnionWrapperDisabledByDefault(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "PaymentEvent",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "record", "name": "CreditCard", "fields": [{"name": "number", "type": "string"}]},
+        {"type": "record", "name": "BankTransfer", "fields": [{"name": "iban", "type": "string"}]}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something"}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Payload any `avro:\"payload\"`")
+	assert.NotContains(t, strings.Join(lines, "\n"), "PaymentEventPayloadUnion")
+}
+
+func TestStruct_UnionWrapperNaming(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "PaymentEvent",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "record", "name": "CreditCard", "fields": [{"name": "number", "type": "string"}]},
+        {"type": "record", "name": "BankTransfer", "fields": [{"name": "iban", "type": "string"}]}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Payload *PaymentEventPayloadUnion `avro:\"payload\"`")
+	assert.Contains(t, lines, "type PaymentEventPayloadUnion struct {")
+	assert.Contains(t, lines, "CreditCard *CreditCard")
+	assert.Contains(t, lines, "BankTransfer *BankTransfer")
+	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) ToAny() (any, error) {")
+	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) FromAny(payload any) error {")
+	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) validate() error {")
+}
+
+func TestStruct_UnionWrapperNullable3(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {
+      "name": "data",
+      "type": ["null",
+        {"type": "record", "name": "TypeX", "fields": [{"name": "a", "type": "string"}]},
+        {"type": "record", "name": "TypeY", "fields": [{"name": "b", "type": "int"}]}
+      ],
+      "default": null
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Data *EventDataUnion `avro:\"data\"`")
+	assert.Contains(t, lines, "type EventDataUnion struct {")
+	assert.Contains(t, lines, "TypeX *TypeX")
+	assert.Contains(t, lines, "TypeY *TypeY")
+}
+
+func TestStruct_UnionWrapperInArray(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Container",
+  "fields": [
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": [
+          {"type": "record", "name": "TypeA", "fields": [{"name": "x", "type": "int"}]},
+          {"type": "record", "name": "TypeB", "fields": [{"name": "y", "type": "string"}]}
+        ]
+      }
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Items []*ContainerItemsUnion `avro:\"items\"`")
+	assert.Contains(t, lines, "type ContainerItemsUnion struct {")
+	assert.Contains(t, lines, "TypeA *TypeA")
+	assert.Contains(t, lines, "TypeB *TypeB")
+}
+
+func TestStruct_UnionWrapperSingleMember(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "record", "name": "TypeA", "fields": [{"name": "x", "type": "int"}]}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Payload *EventPayloadUnion `avro:\"payload\"`")
+	assert.Contains(t, lines, "type EventPayloadUnion struct {")
+	assert.Contains(t, lines, "TypeA *TypeA")
+}
+
+func TestStruct_UnionWrapperInArraySingleMember(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Container",
+  "fields": [
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": [
+          {"type": "record", "name": "TypeA", "fields": [{"name": "x", "type": "int"}]}
+        ]
+      }
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Items []*ContainerItemsUnion `avro:\"items\"`")
+	assert.Contains(t, lines, "type ContainerItemsUnion struct {")
+	assert.Contains(t, lines, "TypeA *TypeA")
+}
+
+func TestStruct_UnionWrapperNullableArrayWithUnionItems(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Order",
+  "fields": [
+    {
+      "name": "payments",
+      "type": ["null", {
+        "type": "array",
+        "items": [
+          {"type": "record", "name": "CardPayment", "fields": [{"name": "card", "type": "string"}]},
+          {"type": "record", "name": "CashPayment", "fields": [{"name": "amount", "type": "int"}]}
+        ]
+      }],
+      "default": null
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+
+	assert.Contains(t, lines, "Payments *[]*OrderPaymentsUnion `avro:\"payments\"`")
+	assert.Contains(t, lines, "type OrderPaymentsUnion struct {")
+	assert.Contains(t, lines, "CardPayment *CardPayment")
+	assert.Contains(t, lines, "CashPayment *CashPayment")
+}
+
+func TestStruct_GenFromRecordSchemaWithUnionWrappers(t *testing.T) {
+	fileName := "testdata/golden_union_wrappers.go"
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+	schema, err := os.ReadFile("testdata/golden.avsc")
+	require.NoError(t, err)
+
+	file, _ := generate(t, string(schema), gc)
+
+	if *update {
+		err = os.WriteFile(fileName, file, 0o600)
+		require.NoError(t, err)
+	}
+
+	want, err := os.ReadFile(fileName)
+	require.NoError(t, err)
+	assert.Equal(t, string(want), string(file))
+}
+
 // generate is a utility to run the generation and return the result as a tuple
 func generate(t *testing.T, schema string, gc gen.Config) ([]byte, []string) {
 	t.Helper()
