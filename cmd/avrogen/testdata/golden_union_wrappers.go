@@ -65,3 +65,9 @@ func (u *EventPayloadUnion) FromAny(payload any) error {
 	}
 	return nil
 }
+
+// RegisterTypes registers all named types used in union wrappers with the given register function.
+func RegisterTypes(register func(name string, obj any)) {
+	register("com.example.ClickEvent", ClickEvent{})
+	register("com.example.PurchaseEvent", PurchaseEvent{})
+}

@@ -112,3 +112,12 @@ func (u *{{ .Name }}) FromAny(payload any) error {
 	return nil
 }
 {{- end }}
+{{- if len .RegisterEntries }}
+
+// RegisterTypes registers all named types used in union wrappers with the given register function.
+func RegisterTypes(register func(name string, obj any)) {
+{{- range .RegisterEntries }}
+	register("{{ .AvroName }}", {{ .GoType }}{})
+{{- end }}
+}
+{{- end }}

@@ -66,6 +66,22 @@ var (
 	}
 )
 
+var preRegisteredGoTypes = map[string]bool{
+	"string":        true,
+	"[]byte":        true,
+	"int":           true,
+	"int8":          true,
+	"int16":         true,
+	"int32":         true,
+	"int64":         true,
+	"float32":       true,
+	"float64":       true,
+	"bool":          true,
+	"time.Time":     true,
+	"time.Duration": true,
+	"*big.Rat":      true,
+}
+
 // TypeToFieldName converts a Go type string to a PascalCase identifier suitable
 // for use as a struct field name in a union wrapper. The input must be a type
 // string produced by the generator; other inputs may yield invalid identifiers.
@@ -291,6 +307,8 @@ type Generator struct {
 	typeenums         []typeenum
 	unionwrappers     []unionwrapper
 	nameCaser         *strcase.Caser
+	registerEntries   []registerEntry
+	seenRegisterNames map[string]bool
 }
 
 // NewGenerator returns a generator.
@@ -328,6 +346,8 @@ func (g *Generator) Reset() {
 	g.thirdPartyImports = g.thirdPartyImports[:0]
 	g.typedefs = g.typedefs[:0]
 	g.unionwrappers = g.unionwrappers[:0]
+	g.registerEntries = g.registerEntries[:0]
+	g.seenRegisterNames = nil
 }
 
 // Parse parses an avro schema into Go types.
@@ -439,7 +459,7 @@ func (g *Generator) hasUnionWrapper(name string) bool {
 	return false
 }
 
-func (g *Generator) resolveWrapperUnion(types []string, structName string, fieldName string) string {
+func (g *Generator) resolveWrapperUnion(types []string, schemas []avro.Schema, structName string, fieldName string) string {
 	name := g.nameCaser.ToPascal(structName) + g.nameCaser.ToPascal(fieldName) + "Union"
 	if !g.hasUnionWrapper(name) {
 		fields := make([]wrapperField, len(types))
@@ -447,8 +467,55 @@ func (g *Generator) resolveWrapperUnion(types []string, structName string, field
 			fields[i] = wrapperField{Name: TypeToFieldName(t), Type: t}
 		}
 		g.unionwrappers = append(g.unionwrappers, unionwrapper{Name: name, Fields: fields})
+		for i, t := range types {
+			g.collectRegisterEntries(schemas[i], t)
+		}
 	}
 	return "*" + name
+}
+
+func (g *Generator) collectRegisterEntries(s avro.Schema, goType string) {
+	if ref, ok := s.(*avro.RefSchema); ok {
+		s = ref.Schema()
+	}
+	if arr, ok := s.(*avro.ArraySchema); ok {
+		g.addRegisterEntry("array:"+avroUnionItemName(arr.Items()), goType)
+		return
+	}
+	if m, ok := s.(*avro.MapSchema); ok {
+		g.addRegisterEntry("map:"+avroUnionItemName(m.Values()), goType)
+		return
+	}
+	named, ok := s.(avro.NamedSchema)
+	if !ok || preRegisteredGoTypes[goType] {
+		return
+	}
+	g.addRegisterEntry(named.FullName(), goType)
+}
+
+func avroUnionItemName(s avro.Schema) string {
+	if ref, ok := s.(*avro.RefSchema); ok {
+		s = ref.Schema()
+	}
+	if named, ok := s.(avro.NamedSchema); ok {
+		return named.FullName()
+	}
+	name := string(s.Type())
+	if lt, ok := s.(avro.LogicalTypeSchema); ok && lt.Logical() != nil {
+		name += "." + string(lt.Logical().Type())
+	}
+	return name
+}
+
+func (g *Generator) addRegisterEntry(avroName, goType string) {
+	if g.seenRegisterNames == nil {
+		g.seenRegisterNames = map[string]bool{}
+	}
+	if g.seenRegisterNames[avroName] {
+		return
+	}
+	g.seenRegisterNames[avroName] = true
+	g.registerEntries = append(g.registerEntries, registerEntry{AvroName: avroName, GoType: goType})
 }
 
 func (g *Generator) resolveRefSchema(s *avro.RefSchema, metadata any) string {
@@ -460,11 +527,13 @@ func (g *Generator) resolveRefSchema(s *avro.RefSchema, metadata any) string {
 
 func (g *Generator) resolveUnionTypes(s *avro.UnionSchema, metadata any, structName string, fieldName string) string {
 	types := make([]string, 0, len(s.Types()))
+	schemas := make([]avro.Schema, 0, len(s.Types()))
 	for _, elem := range s.Types() {
 		if _, ok := elem.(*avro.NullSchema); ok {
 			continue
 		}
 		types = append(types, g.generate(elem, metadata, "", ""))
+		schemas = append(schemas, elem)
 	}
 	if s.Nullable() && len(types) == 1 {
 		return "*" + g.generate(schemas[0], metadata, structName, fieldName)
@@ -473,7 +542,7 @@ func (g *Generator) resolveUnionTypes(s *avro.UnionSchema, metadata any, structN
 		if len(types) == 0 {
 			return "any"
 		}
-		return g.resolveWrapperUnion(types, structName, fieldName)
+		return g.resolveWrapperUnion(types, schemas, structName, fieldName)
 	}
 	return "any"
 }
@@ -572,15 +641,17 @@ func (g *Generator) Write(w io.Writer) error {
 		Metadata          any
 		Typeenums         []typeenum
 		Unionwrappers     []unionwrapper
+		RegisterEntries   []registerEntry
 	}{
-		WithEncoders:  g.encoders,
-		PackageName:   g.pkg,
-		PackageDoc:    g.pkgdoc,
-		Imports:       append(g.imports, g.thirdPartyImports...),
-		Typedefs:      g.typedefs,
-		Metadata:      g.metadata,
-		Typeenums:     g.typeenums,
-		Unionwrappers: g.unionwrappers,
+		WithEncoders:    g.encoders,
+		PackageName:     g.pkg,
+		PackageDoc:      g.pkgdoc,
+		Imports:         append(g.imports, g.thirdPartyImports...),
+		Typedefs:        g.typedefs,
+		Metadata:        g.metadata,
+		Typeenums:       g.typeenums,
+		Unionwrappers:   g.unionwrappers,
+		RegisterEntries: g.registerEntries,
 	}
 	return parsed.Execute(w, data)
 }
@@ -634,4 +705,9 @@ type unionwrapper struct {
 type wrapperField struct {
 	Name string
 	Type string
+}
+
+type registerEntry struct {
+	AvroName string
+	GoType   string
 }

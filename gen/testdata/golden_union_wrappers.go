@@ -173,3 +173,11 @@ func (u *TestNullableRecordUnionWith3OptionsUnion) FromAny(payload any) error {
 	}
 	return nil
 }
+
+// RegisterTypes registers all named types used in union wrappers with the given register function.
+func RegisterTypes(register func(name string, obj any)) {
+	register("a.b.record1InNonNullableUnion", Record1InNonNullableUnion{})
+	register("a.b.record2InNonNullableUnion", Record2InNonNullableUnion{})
+	register("a.b.record1InNullableUnion", Record1InNullableUnion{})
+	register("a.b.record2InNullableUnion", Record2InNullableUnion{})
+}

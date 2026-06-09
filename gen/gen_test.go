@@ -501,6 +501,9 @@ func TestStruct_UnionWrapperNaming(t *testing.T) {
 	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) ToAny() (any, error) {")
 	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) FromAny(payload any) error {")
 	assert.Contains(t, lines, "func (u *PaymentEventPayloadUnion) validate() error {")
+	assert.Contains(t, lines, "func RegisterTypes(register func(name string, obj any)) {")
+	assert.Contains(t, lines, `register("CreditCard", CreditCard{})`)
+	assert.Contains(t, lines, `register("BankTransfer", BankTransfer{})`)
 }
 
 func TestStruct_UnionWrapperNullable3(t *testing.T) {
@@ -526,6 +529,8 @@ func TestStruct_UnionWrapperNullable3(t *testing.T) {
 	assert.Contains(t, lines, "type EventDataUnion struct {")
 	assert.Contains(t, lines, "TypeX *TypeX")
 	assert.Contains(t, lines, "TypeY *TypeY")
+	assert.Contains(t, lines, `register("TypeX", TypeX{})`)
+	assert.Contains(t, lines, `register("TypeY", TypeY{})`)
 }
 
 func TestStruct_UnionWrapperInArray(t *testing.T) {
@@ -646,6 +651,127 @@ func TestStruct_GenFromRecordSchemaWithUnionWrappers(t *testing.T) {
 	want, err := os.ReadFile(fileName)
 	require.NoError(t, err)
 	assert.Equal(t, string(want), string(file))
+}
+
+func TestStruct_RegisterTypes_SkipsPrimitives(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        "string",
+        {"type": "record", "name": "TypeX", "fields": [{"name": "x", "type": "string"}]}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+	combined := strings.Join(lines, "\n")
+
+	assert.Contains(t, combined, `register("TypeX", TypeX{})`)
+	assert.NotContains(t, combined, `register("string"`)
+}
+
+func TestStruct_RegisterTypes_ArrayRecursion(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Container",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "array", "items": {"type": "record", "name": "RecordA", "fields": []}},
+        {"type": "record", "name": "RecordB", "fields": []}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+	combined := strings.Join(lines, "\n")
+
+	assert.Contains(t, combined, `register("array:RecordA", []RecordA{})`)
+	assert.Contains(t, combined, `register("RecordB", RecordB{})`)
+}
+
+func TestStruct_RegisterTypes_MapRecursion(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Container",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "map", "values": {"type": "record", "name": "RecordA", "fields": []}},
+        {"type": "record", "name": "RecordB", "fields": []}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+	combined := strings.Join(lines, "\n")
+
+	assert.Contains(t, combined, `register("map:RecordA", map[string]RecordA{})`)
+	assert.Contains(t, combined, `register("RecordB", RecordB{})`)
+}
+
+func TestStruct_RegisterTypes_Deduplication(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {
+      "name": "payload1",
+      "type": [
+        {"type": "record", "name": "SharedRecord", "fields": []},
+        {"type": "record", "name": "TypeA", "fields": []}
+      ]
+    },
+    {
+      "name": "payload2",
+      "type": [
+        "SharedRecord",
+        {"type": "record", "name": "TypeB", "fields": []}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something", UnionWrappers: true}
+
+	_, lines := generate(t, schema, gc)
+	combined := strings.Join(lines, "\n")
+
+	assert.Equal(t, 1, strings.Count(combined, `register("SharedRecord"`), "SharedRecord should be registered exactly once")
+	assert.Contains(t, combined, `register("TypeA", TypeA{})`)
+	assert.Contains(t, combined, `register("TypeB", TypeB{})`)
+}
+
+func TestStruct_RegisterTypes_DisabledWithoutFlag(t *testing.T) {
+	schema := `{
+  "type": "record",
+  "name": "Event",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {"type": "record", "name": "TypeX", "fields": []},
+        {"type": "record", "name": "TypeY", "fields": []}
+      ]
+    }
+  ]
+}`
+	gc := gen.Config{PackageName: "Something"} // UnionWrappers: false
+
+	_, lines := generate(t, schema, gc)
+
+	assert.NotContains(t, strings.Join(lines, "\n"), "RegisterTypes")
 }
 
 // generate is a utility to run the generation and return the result as a tuple
