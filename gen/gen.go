@@ -371,20 +371,18 @@ func (g *Generator) rawSchema(schema *avro.RecordSchema) string {
 
 func (g *Generator) hasTypeDef(name string) bool {
 	for _, def := range g.typedefs {
-		if def.Name != name {
-			continue
+		if def.Name == name {
+			return true
 		}
-		return true
 	}
 	return false
 }
 
 func (g *Generator) hasTypeEnum(name string) bool {
 	for _, def := range g.typeenums {
-		if def.Name != name {
-			continue
+		if def.Name == name {
+			return true
 		}
-		return true
 	}
 	return false
 }
