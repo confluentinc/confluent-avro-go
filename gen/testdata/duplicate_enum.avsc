@@ -1,0 +1,30 @@
+{
+  "type": "record",
+  "name": "Outer",
+  "namespace": "demo",
+  "fields": [
+    {
+      "name": "first",
+      "type": {
+        "type": "record",
+        "name": "Wrapper",
+        "namespace": "demo",
+        "fields": [
+          {
+            "name": "kind",
+            "type": {
+              "type": "enum",
+              "name": "Kind",
+              "namespace": "demo",
+              "symbols": ["X", "Y"]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "second",
+      "type": "demo.Kind"
+    }
+  ]
+}
