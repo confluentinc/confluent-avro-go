@@ -7,7 +7,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/golang/snappy v1.0.0
 	github.com/json-iterator/go v1.1.12
-	github.com/klauspost/compress v1.19.0
+	github.com/klauspost/compress v1.19.1
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/tools v0.48.0
