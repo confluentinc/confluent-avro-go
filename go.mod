@@ -9,13 +9,13 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/klauspost/compress v1.19.2
 	github.com/modern-go/reflect2 v1.0.2
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	golang.org/x/tools v0.49.0
 )
 
 require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
