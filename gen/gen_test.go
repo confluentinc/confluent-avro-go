@@ -351,6 +351,33 @@ func TestGenerator_GenEnum(t *testing.T) {
 	assert.Equal(t, string(want), string(formatted))
 }
 
+func TestGenerator_DeduplicatesEnumReferences(t *testing.T) {
+	schema, err := avro.ParseFiles("testdata/duplicate_enum.avsc")
+	require.NoError(t, err)
+
+	g := gen.NewGenerator("demo", map[string]gen.TagStyle{}, gen.WithEnums(true))
+	g.Parse(schema)
+
+	var buf bytes.Buffer
+	err = g.Write(&buf)
+	require.NoError(t, err)
+
+	formatted, err := format.Source(buf.Bytes())
+	require.NoError(t, err)
+
+	if *update {
+		err = os.WriteFile("testdata/golden_duplicate_enum.go", formatted, 0o600)
+		require.NoError(t, err)
+	}
+
+	want, err := os.ReadFile("testdata/golden_duplicate_enum.go")
+	require.NoError(t, err)
+	assert.Equal(t, string(want), string(formatted))
+
+	occurrences := strings.Count(string(formatted), "type Kind string")
+	assert.Equal(t, 1, occurrences, "expected exactly one `type Kind string` declaration, got %d", occurrences)
+}
+
 func TestGenerator(t *testing.T) {
 	unionSchema, err := avro.ParseFiles("testdata/uniontype.avsc")
 	require.NoError(t, err)
