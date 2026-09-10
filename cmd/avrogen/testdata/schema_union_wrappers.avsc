@@ -1,0 +1,22 @@
+{
+  "type": "record",
+  "name": "Event",
+  "namespace": "com.example",
+  "fields": [
+    {
+      "name": "payload",
+      "type": [
+        {
+          "type": "record",
+          "name": "ClickEvent",
+          "fields": [{"name": "url", "type": "string"}]
+        },
+        {
+          "type": "record",
+          "name": "PurchaseEvent",
+          "fields": [{"name": "amount", "type": "long"}]
+        }
+      ]
+    }
+  ]
+}

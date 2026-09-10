@@ -253,6 +253,17 @@ Check the options and usage with `-h`:
 avrogen -h
 ```
 
+### Union type wrappers generation
+
+By default union types are generated as `any`.
+However you can specify `-union-wrappers` to generate wrapper types implementing `UnionConverter` as described above.
+
+The wrapper types will be named using the template `{{ Parent type name }}{{ Field name}}Union`.
+The fields in the wrapper are named after the type they contain.
+
+When using the `-union-wrappers` option, a `RegisterTypes` function is also automatically generated, which will register the union member types.
+It accepts a type registration function of type `func(name string, obj any)`, so you can pass the global `avro.Register`, the `Register` method of a custom `avro.TypeResolver`, or the `RegisterType` method of a `github.com/confluentinc/confluent-kafka-go/v2/schemaregistry/serde/avrov3` `Serde` struct.
+
 ### Custom logical type mapping with avrogen
 
 You can register custom logical type mappings to be used during code generation. 

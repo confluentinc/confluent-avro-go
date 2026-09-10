@@ -33,6 +33,7 @@ type config struct {
 	SchemaRegistry string
 	LogicalTypes   logicalTypes
 	EnumsGen       bool
+	UnionWrappers  bool
 }
 
 type logicalTypes []string
@@ -66,6 +67,7 @@ func realMain(args []string, stdout, stderr io.Writer) int {
 	flgs.StringVar(&cfg.TemplateFileName, "template-filename", "", "Override output template with one loaded from file.")
 	flgs.StringVar(&cfg.SchemaRegistry, "schemaregistry", "", "The URL to schema registry, e.g.: http://localhost:8081.")
 	flgs.BoolVar(&cfg.EnumsGen, "enums", false, "Generate Go enums for Avro enums.")
+	flgs.BoolVar(&cfg.UnionWrappers, "union-wrappers", false, "Generate UnionConverter wrapper structs for union types.")
 	var lt logicalTypes
 	flgs.Var(&lt, "logicaltype",
 		"A logical type mapping of the form logicalType,goType[,import]. Can be specified multiple times.")
@@ -111,6 +113,7 @@ func realMain(args []string, stdout, stderr io.Writer) int {
 		gen.WithStrictTypes(cfg.StrictTypes),
 		gen.WithFullSchema(cfg.FullSchema),
 		gen.WithEnums(cfg.EnumsGen),
+		gen.WithUnionWrappers(cfg.UnionWrappers),
 	}
 
 	for _, entry := range lt {
