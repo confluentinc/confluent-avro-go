@@ -1,6 +1,6 @@
 module github.com/confluentinc/confluent-avro-go/v2
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/ettle/strcase v0.2.0
@@ -10,12 +10,12 @@ require (
 	github.com/klauspost/compress v1.20.0
 	github.com/modern-go/reflect2 v1.0.2
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/tools v0.49.0
+	golang.org/x/tools v0.50.0
 )
 
 require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 )
