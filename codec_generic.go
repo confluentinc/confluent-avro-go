@@ -22,7 +22,7 @@ func genericDecode(typ reflect2.Type, dec ValDecoder, r *Reader) any {
 	return obj
 }
 
-func genericReceiver(schema Schema, cfg *frozenConfig) (reflect2.Type, error) {
+func genericReceiver(schema Schema, d *decoderContext) (reflect2.Type, error) {
 	if schema.Type() == Ref {
 		schema = schema.(*RefSchema).Schema()
 	}
@@ -32,7 +32,7 @@ func genericReceiver(schema Schema, cfg *frozenConfig) (reflect2.Type, error) {
 	if ok {
 		ls = lts.Logical()
 	}
-	convert := ls != nil && !cfg.config.DisableLogicalTypeConversion
+	convert := ls != nil && !d.cfg.config.DisableLogicalTypeConversion
 
 	schemaName := string(schema.Type())
 	if ls != nil {

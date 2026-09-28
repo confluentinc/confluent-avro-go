@@ -496,12 +496,13 @@ func (d *unionResolvedDecoder) Decode(ptr unsafe.Pointer, r *Reader) {
 		// way, fall back to the generic decode below.
 		name := schemaTypeName(schema)
 		obj := map[string]any{}
-		vTyp, err := genericReceiver(schema, d.cfg)
+		dc := newDecoderContext(d.cfg)
+		vTyp, err := genericReceiver(schema, dc)
 		if err != nil {
 			r.ReportError("Union", err.Error())
 			return
 		}
-		obj[name] = genericDecode(vTyp, decoderOfType(newDecoderContext(d.cfg), schema, vTyp), r)
+		obj[name] = genericDecode(vTyp, decoderOfType(dc, schema, vTyp), r)
 
 		*pObj = obj
 		return
