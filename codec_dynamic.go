@@ -15,7 +15,7 @@ type efaceDecoder struct {
 }
 
 func newEfaceDecoder(d *decoderContext, schema Schema) *efaceDecoder {
-	typ, _ := genericReceiver(schema)
+	typ, _ := genericReceiver(schema, d.cfg)
 	dec := decoderOfType(d, schema, typ)
 
 	return &efaceDecoder{

@@ -232,7 +232,7 @@ func TestGenericDecode(t *testing.T) {
 			schema := MustParse(test.schema)
 			r := NewReader(bytes.NewReader(test.data), 10)
 
-			typ, err := genericReceiver(schema)
+			typ, err := genericReceiver(schema, DefaultConfig.(*frozenConfig))
 			require.NoError(t, err)
 			dec := decoderOfType(newDecoderContext(DefaultConfig.(*frozenConfig)), schema, typ)
 
@@ -247,7 +247,7 @@ func TestGenericDecode(t *testing.T) {
 func TestGenericReceiver_UnsupportedType(t *testing.T) {
 	schema := NewPrimitiveSchema(Type("test"), nil)
 
-	_, err := genericReceiver(schema)
+	_, err := genericReceiver(schema, DefaultConfig.(*frozenConfig))
 
 	assert.Error(t, err)
 }
