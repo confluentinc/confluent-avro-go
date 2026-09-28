@@ -404,7 +404,23 @@ func decoderOfResolvedUnion(d *decoderContext, schema Schema, _ reflect2.Type) (
 
 	types := make([]reflect2.Type, len(union.Types()))
 	decoders := make([]ValDecoder, len(union.Types()))
+	rawSkip := make([]bool, len(union.Types()))
 	for i, schema := range union.Types() {
+		if d.cfg.config.DisableLogicalTypeConversion && schemaHasLogicalType(schema) {
+			// Raw mode requested: don't resolve a logical-type branch to its
+			// pre-registered semantic type (e.g. "long.timestamp-millis" ->
+			// time.Time). This isn't a resolution failure -- record it
+			// separately from the failure-to-resolve nil below so Decode
+			// doesn't mistake an intentional raw-mode skip for an
+			// unresolvable type when UnionResolutionError is set. Decode
+			// falls back to the generic path for this branch, which returns
+			// the raw underlying primitive via genericReceiver.
+			decoders[i] = nil
+			types[i] = nil
+			rawSkip[i] = true
+			continue
+		}
+
 		name := unionResolutionName(schema)
 
 		typ, err := d.cfg.resolver.Type(name)
@@ -421,6 +437,7 @@ func decoderOfResolvedUnion(d *decoderContext, schema Schema, _ reflect2.Type) (
 
 			decoders = []ValDecoder{}
 			types = []reflect2.Type{}
+			rawSkip = []bool{}
 			break
 		}
 
@@ -434,6 +451,7 @@ func decoderOfResolvedUnion(d *decoderContext, schema Schema, _ reflect2.Type) (
 		schema:   union,
 		types:    types,
 		decoders: decoders,
+		rawSkip:  rawSkip,
 	}, nil
 }
 
@@ -442,6 +460,7 @@ type unionResolvedDecoder struct {
 	schema   *UnionSchema
 	types    []reflect2.Type
 	decoders []ValDecoder
+	rawSkip  []bool
 }
 
 func (d *unionResolvedDecoder) Decode(ptr unsafe.Pointer, r *Reader) {
@@ -466,20 +485,24 @@ func (d *unionResolvedDecoder) Decode(ptr unsafe.Pointer, r *Reader) {
 	}()
 
 	if i >= len(d.decoders) || d.decoders[i] == nil {
-		if d.cfg.config.UnionResolutionError {
+		rawSkip := i < len(d.rawSkip) && d.rawSkip[i]
+		if d.cfg.config.UnionResolutionError && !rawSkip {
 			r.ReportError("decode union type", "unknown union type")
 			return
 		}
 
-		// We cannot resolve this, set it to the map type
+		// Either resolution genuinely failed (and UnionResolutionError is
+		// unset) or raw mode intentionally skipped this branch -- either
+		// way, fall back to the generic decode below.
 		name := schemaTypeName(schema)
 		obj := map[string]any{}
-		vTyp, err := genericReceiver(schema)
+		dc := newDecoderContext(d.cfg)
+		vTyp, err := genericReceiver(schema, dc)
 		if err != nil {
 			r.ReportError("Union", err.Error())
 			return
 		}
-		obj[name] = genericDecode(vTyp, decoderOfType(newDecoderContext(d.cfg), schema, vTyp), r)
+		obj[name] = genericDecode(vTyp, decoderOfType(dc, schema, vTyp), r)
 
 		*pObj = obj
 		return
@@ -577,6 +600,11 @@ func unionResolutionName(schema Schema) string {
 	}
 
 	return name
+}
+
+func schemaHasLogicalType(schema Schema) bool {
+	lts, ok := schema.(LogicalTypeSchema)
+	return ok && lts.Logical() != nil
 }
 
 func encoderOfResolverUnion(e *encoderContext, schema Schema, typ reflect2.Type) ValEncoder {
