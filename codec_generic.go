@@ -22,7 +22,7 @@ func genericDecode(typ reflect2.Type, dec ValDecoder, r *Reader) any {
 	return obj
 }
 
-func genericReceiver(schema Schema) (reflect2.Type, error) {
+func genericReceiver(schema Schema, cfg *frozenConfig) (reflect2.Type, error) {
 	if schema.Type() == Ref {
 		schema = schema.(*RefSchema).Schema()
 	}
@@ -32,6 +32,7 @@ func genericReceiver(schema Schema) (reflect2.Type, error) {
 	if ok {
 		ls = lts.Logical()
 	}
+	convert := ls != nil && !cfg.config.DisableLogicalTypeConversion
 
 	schemaName := string(schema.Type())
 	if ls != nil {
@@ -45,7 +46,7 @@ func genericReceiver(schema Schema) (reflect2.Type, error) {
 		var v bool
 		return reflect2.TypeOf(v), nil
 	case Int:
-		if ls != nil {
+		if convert {
 			switch ls.Type() {
 			case Date:
 				var v time.Time
@@ -59,7 +60,7 @@ func genericReceiver(schema Schema) (reflect2.Type, error) {
 		var v int
 		return reflect2.TypeOf(v), nil
 	case Long:
-		if ls != nil {
+		if convert {
 			switch ls.Type() {
 			case TimeMicros:
 				var v time.Duration
@@ -90,7 +91,7 @@ func genericReceiver(schema Schema) (reflect2.Type, error) {
 		var v string
 		return reflect2.TypeOf(v), nil
 	case Bytes:
-		if ls != nil && ls.Type() == Decimal {
+		if convert && ls.Type() == Decimal {
 			var v *big.Rat
 			return reflect2.TypeOf(v), nil
 		}
@@ -117,11 +118,15 @@ func genericReceiver(schema Schema) (reflect2.Type, error) {
 		if ls != nil {
 			switch ls.Type() {
 			case Duration:
-				var v LogicalDuration
-				return reflect2.TypeOf(v), nil
+				if convert {
+					var v LogicalDuration
+					return reflect2.TypeOf(v), nil
+				}
 			case Decimal:
-				var v *big.Rat
-				return reflect2.TypeOf(v), nil
+				if convert {
+					var v *big.Rat
+					return reflect2.TypeOf(v), nil
+				}
 			}
 		}
 		v := byteSliceToArray(make([]byte, fixed.Size()), fixed.Size())
