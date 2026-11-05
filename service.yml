@@ -7,8 +7,6 @@ codeowners:
   enable: true
 renovatebot:
   enable: true
-  automerge:
-    enable: true
 semaphore:
   enable: true
   pipeline_enable: true
@@ -20,9 +18,12 @@ semaphore:
         - name: TAG_NAME
           required: true
           description: The name of the tag to be created.
-          default_value: "vX.Y.Z"
+          default_value: vX.Y.Z
   managed_sections:
     - version
     - name
     - agent
     - global_job_config
+automerge:
+  renovate:
+    enable: true
