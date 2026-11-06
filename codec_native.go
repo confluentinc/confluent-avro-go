@@ -78,7 +78,7 @@ func createDecoderOfNative(schema *PrimitiveSchema, typ reflect2.Type) ValDecode
 		case st == Int && lt == TimeMillis: // time.Duration
 			return &timeMillisCodec{}
 
-		case st == Long && lt == TimeMicros: // time.Duration
+		case st == Long && lt == TimeMicros && typ.Type1() == timeDurationType:
 			return &timeMicrosCodec{
 				convert: createLongConverter(schema.encodedType),
 			}
@@ -243,7 +243,7 @@ func createEncoderOfNative(schema *PrimitiveSchema, typ reflect2.Type) ValEncode
 		case st == Int && lt == TimeMillis: // time.Duration
 			return &timeMillisCodec{}
 
-		case st == Long && lt == TimeMicros: // time.Duration
+		case st == Long && lt == TimeMicros && typ.Type1() == timeDurationType:
 			return &timeMicrosCodec{}
 
 		case st == Long:
