@@ -221,6 +221,29 @@ func TestAvroGen_GeneratesSchemaWithCustomLogicalTypes(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+func TestAvroGen_GeneratesSchemaWithUnionWrappers(t *testing.T) {
+	path, err := os.MkdirTemp("./", "avrogen")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.RemoveAll(path) })
+
+	file := filepath.Join(path, "test.go")
+	args := []string{"avrogen", "-pkg", "testpkg", "-o", file, "-union-wrappers", "testdata/schema_union_wrappers.avsc"}
+	gotCode := realMain(args, io.Discard, io.Discard)
+	require.Equal(t, 0, gotCode)
+
+	got, err := os.ReadFile(file)
+	require.NoError(t, err)
+
+	if *update {
+		err = os.WriteFile("testdata/golden_union_wrappers.go", got, 0o600)
+		require.NoError(t, err)
+	}
+
+	want, err := os.ReadFile("testdata/golden_union_wrappers.go")
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
 func TestParseTags(t *testing.T) {
 	tests := []struct {
 		name string
