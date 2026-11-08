@@ -13,12 +13,13 @@ func (r *Reader) ReadNext(schema Schema) any {
 	if ok {
 		ls = lts.Logical()
 	}
+	convert := ls != nil && !r.cfg.config.DisableLogicalTypeConversion
 
 	switch schema.Type() {
 	case Boolean:
 		return r.ReadBool()
 	case Int:
-		if ls != nil {
+		if convert {
 			switch ls.Type() {
 			case Date:
 				i := r.ReadInt()
@@ -31,7 +32,7 @@ func (r *Reader) ReadNext(schema Schema) any {
 		}
 		return int(r.ReadInt())
 	case Long:
-		if ls != nil {
+		if convert {
 			switch ls.Type() {
 			case TimeMicros:
 				return time.Duration(r.ReadLong()) * time.Microsecond
@@ -57,7 +58,7 @@ func (r *Reader) ReadNext(schema Schema) any {
 	case String:
 		return r.ReadString()
 	case Bytes:
-		if ls != nil && ls.Type() == Decimal {
+		if convert && ls.Type() == Decimal {
 			dec := ls.(*DecimalLogicalSchema)
 			return ratFromBytes(r.ReadBytes(), dec.Scale())
 		}
@@ -115,7 +116,7 @@ func (r *Reader) ReadNext(schema Schema) any {
 		size := schema.(*FixedSchema).Size()
 		obj := make([]byte, size)
 		r.Read(obj)
-		if ls != nil && ls.Type() == Decimal {
+		if convert && ls.Type() == Decimal {
 			dec := ls.(*DecimalLogicalSchema)
 			return ratFromBytes(obj, dec.Scale())
 		}

@@ -56,6 +56,15 @@ type Config struct {
 	// allocation size by default.
 	// If this size is exceeded, the decoder returns an error.
 	MaxSliceAllocSize int
+
+	// DisableLogicalTypeConversion controls whether generic decode (into an
+	// any/interface{} target) converts Avro logical types to their semantic
+	// Go type (e.g. timestamp-millis -> time.Time, decimal -> *big.Rat).
+	// When true, generic decode returns the raw underlying Avro primitive
+	// instead (e.g. int64, []byte), matching the JVM Avro deserializer's
+	// avro.use.logical.type.converters=false behavior. Specific (struct
+	// target) decode is unaffected by this setting.
+	DisableLogicalTypeConversion bool
 }
 
 // Freeze makes the configuration immutable.
